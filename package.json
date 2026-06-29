@@ -2,6 +2,7 @@
   "name": "operations-co-pilot",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "vercel dev",
     "dev:ui": "vite",
