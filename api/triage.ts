@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import Anthropic from '@anthropic-ai/sdk'
 
-const MODEL = 'claude-3-5-sonnet-20241022'
+const MODEL = 'claude-sonnet-4-5'
 
 const STACK = [
   { name: 'Notion', purpose: 'knowledge and SOPs' },
