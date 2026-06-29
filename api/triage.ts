@@ -1,10 +1,48 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import Anthropic from '@anthropic-ai/sdk'
-import { STACK } from '../src/config/stack'
-import { buildSystemPrompt } from '../src/agent/prompt'
-import type { TriageResult } from '../src/agent/types'
 
 const MODEL = 'claude-3-5-sonnet-20241022'
+
+const STACK = [
+  { name: 'Notion', purpose: 'knowledge and SOPs' },
+  { name: 'ClickUp', purpose: 'projects and tasks' },
+  { name: 'HubSpot', purpose: 'clients, deals, vendors' },
+  { name: 'Zapier', purpose: 'automation' },
+  { name: 'Google Drive', purpose: 'files and contracts' },
+  { name: 'Slack', purpose: 'comms' },
+  { name: 'Gmail', purpose: 'email' },
+]
+
+function buildSystemPrompt(): string {
+  return `You are an operations triage agent for a startup. A team member submits a single operational request or issue. You review it against their current tool stack and return a structured triage as raw JSON only — no explanation, no markdown, no code fences.
+
+Return exactly this JSON shape:
+{
+  "type": "one of: Vendor / Payments | Tooling & Source of Truth | Process / SOP | Onboarding | AI Adoption | Finance Ops | Hiring | Other",
+  "priority": 3,
+  "owner": "the function that owns this, e.g. Ops, Finance, Ops + Finance",
+  "stack_touch": ["Tool names from the stack this request involves"],
+  "recommended_home": "The single existing tool to build or resolve this in",
+  "dependencies": ["up to 3 things this depends on or blocks"],
+  "quick_fix": "The immediate first action, naming the tool, max 20 words",
+  "external_send": false,
+  "plan": [
+    { "step": "what to do", "owner": "who does it" }
+  ],
+  "success_metric": "Measurable definition of done, max 15 words"
+}
+
+Rules:
+- type must be exactly one of the listed strings
+- priority is an integer 1-5; 4-5 is P1 (highest business impact)
+- stack_touch lists only tools from the provided stack; empty array if none apply
+- recommended_home must be a tool from the provided stack; empty string if the stack cannot cover it
+- dependencies has at most 3 items
+- plan has at most 4 steps
+- external_send is true only if quick_fix involves sending a message, email, or payment to a person or system outside the immediate team
+- If the stack cannot cover this request, leave stack_touch empty, set recommended_home to empty string, and explain in the plan what is needed and why
+- Do not invent tools to appear complete`
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -40,14 +78,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .join('\n')
       .trim()
 
-    // Strip stray fences, then slice from first { to last }
     text = text.replace(/```json/gi, '').replace(/```/g, '').trim()
     const start = text.indexOf('{')
     const end = text.lastIndexOf('}')
     if (start === -1 || end === -1) throw new Error('No JSON object in response')
     text = text.slice(start, end + 1)
 
-    const result = JSON.parse(text) as TriageResult
+    const result = JSON.parse(text)
 
     if (!result.type || typeof result.priority !== 'number') {
       throw new Error('Invalid triage result shape')
