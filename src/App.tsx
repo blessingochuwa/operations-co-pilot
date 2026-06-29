@@ -48,7 +48,13 @@ export default function App() {
         body: JSON.stringify({ request: req }),
       })
 
-      const data = await res.json()
+      const text = await res.text()
+      let data: unknown
+      try {
+        data = JSON.parse(text)
+      } catch {
+        throw new Error('Service temporarily unavailable. Please try again.')
+      }
 
       if (!res.ok) {
         throw new Error((data as { error?: string }).error ?? 'Triage failed')

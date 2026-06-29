@@ -4,7 +4,7 @@ import { STACK } from '../src/config/stack'
 import { buildSystemPrompt } from '../src/agent/prompt'
 import type { TriageResult } from '../src/agent/types'
 
-const MODEL = 'claude-sonnet-4-6'
+const MODEL = 'claude-3-5-sonnet-20241022'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
